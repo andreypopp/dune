@@ -1,0 +1,5 @@
+(library
+ (name foo)
+ (public_name foo)
+ (modules foo)
+ (c_names stub))
