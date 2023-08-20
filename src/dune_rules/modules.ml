@@ -99,8 +99,8 @@ module Stdlib = struct
 
   let make ~(stdlib : Ocaml_stdlib.t) ~modules ~wrapped ~main_module_name =
     let modules =
-      match wrapped with
-      | Wrapped.Simple true | Yes_with_transition _ ->
+      match Wrapped.to_bool wrapped with
+      | true ->
         Module_name.Map.map modules ~f:(fun m ->
           if Module.name m = main_module_name || special_compiler_module stdlib m
           then m
@@ -108,7 +108,7 @@ module Stdlib = struct
             let path = [ main_module_name; Module.name m ] in
             let m = Module.set_path m path in
             Module.set_obj_name m (Module_name.Path.wrap path)))
-      | Simple false -> modules
+      | false -> modules
     in
     let unwrapped = stdlib.modules_before_stdlib in
     let exit_module = stdlib.exit_module in
@@ -713,7 +713,7 @@ module Wrapped = struct
     let wrapped_compat =
       match (wrapped : Dune_lang.Wrapped.t) with
       | Simple false -> assert false
-      | Simple true -> Module_name.Map.empty
+      | Simple true | Yes_as _ -> Module_name.Map.empty
       | Yes_with_transition _ ->
         let toplevel = Module_trie.toplevel_only modules in
         Module_name.Map.remove toplevel main_module_name
@@ -893,18 +893,18 @@ let lib ~obj_dir ~main_module_name ~wrapped ~stdlib ~lib_name ~implements ~modul
       let modules = Module_trie.to_map modules in
       Stdlib (Stdlib.make ~stdlib ~modules ~wrapped ~main_module_name)
     | None ->
-      (match wrapped, main_module_name, Module_trie.as_singleton modules with
-       | Simple false, _, Some m -> Singleton m
-       | Simple false, _, None ->
+      (match Dune_lang.Wrapped.to_bool wrapped, main_module_name, Module_trie.as_singleton modules with
+       | false, _, Some m -> Singleton m
+       | false, _, None ->
          let mangle = Mangle.Unwrapped in
          Unwrapped (Unwrapped.of_trie modules ~mangle ~obj_dir)
-       | (Yes_with_transition _ | Simple true), Some main_module_name, Some m ->
+       | true, Some main_module_name, Some m ->
          if Module.name m = main_module_name && not implements
          then Singleton m
          else make_wrapped main_module_name
-       | (Yes_with_transition _ | Simple true), Some main_module_name, None ->
+       | true, Some main_module_name, None ->
          make_wrapped main_module_name
-       | (Simple true | Yes_with_transition _), None, _ ->
+       | true, None, _ ->
          Code_error.raise "Modules.lib: cannot wrap without main module name" [])
   in
   with_obj_map modules

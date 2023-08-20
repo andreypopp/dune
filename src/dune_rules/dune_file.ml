@@ -922,6 +922,8 @@ module Library = struct
        | Some _ -> This (Some (Module_name.of_local_lib_name t.name)))
     | None, This (Simple true | Yes_with_transition _) ->
       This (Some (Module_name.of_local_lib_name t.name))
+    | None, This (Yes_as name) ->
+      This (Some (Module_name.of_string name))
   ;;
 
   let to_lib_info

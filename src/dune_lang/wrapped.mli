@@ -1,5 +1,6 @@
 type t =
   | Simple of bool
+  | Yes_as of string
   | Yes_with_transition of string
 
 val equal : t -> t -> bool

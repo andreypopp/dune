@@ -126,7 +126,7 @@ let gen_wrapped_compat_modules (lib : Library.t) cctx =
   let transition_message =
     lazy
       (match Modules.wrapped modules with
-       | Simple _ -> assert false
+       | Simple _ | Yes_as _ -> assert false
        | Yes_with_transition r -> r)
   in
   Module_name.Map_traversals.parallel_iter wrapped_compat ~f:(fun name m ->
