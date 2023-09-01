@@ -51,10 +51,13 @@ module Processed = struct
     ; src_dirs : Path.Set.t
     ; flags : string list
     ; extensions : string option Ml_kind.Dict.t list
+    ; extension_to_reader : (string * string list) list
     ; melc_flags : string list
     }
 
-  let dyn_of_config { stdlib_dir; obj_dirs; src_dirs; flags; extensions; melc_flags } =
+  let dyn_of_config
+    { stdlib_dir; obj_dirs; src_dirs; flags; extensions; melc_flags; extension_to_reader }
+    =
     let open Dyn in
     record
       [ "stdlib_dir", option Path.to_dyn stdlib_dir
@@ -62,6 +65,7 @@ module Processed = struct
       ; "src_dirs", Path.Set.to_dyn src_dirs
       ; "flags", list string flags
       ; "extensions", list (Ml_kind.Dict.to_dyn (Dyn.option string)) extensions
+      ; "extension_to_reader", list (pair string (list string)) extension_to_reader
       ; "melc_flags", list string melc_flags
       ]
   ;;
@@ -105,6 +109,7 @@ module Processed = struct
           ; obj_dirs = Path.Set.empty
           ; src_dirs = Path.Set.empty
           ; flags = [ "-x" ]
+          ; extension_to_reader = []
           ; extensions = [ { Ml_kind.Dict.intf = None; impl = Some "ext" } ]
           ; melc_flags = [ "-y" ]
           }
@@ -146,7 +151,18 @@ module Processed = struct
     | None, None -> None
   ;;
 
-  let to_sexp ~opens ~pp { stdlib_dir; obj_dirs; src_dirs; flags; extensions; melc_flags }
+  let to_sexp
+    ~opens
+    ~pp
+    ~reader
+    { stdlib_dir
+    ; obj_dirs
+    ; src_dirs
+    ; flags
+    ; extensions
+    ; melc_flags
+    ; extension_to_reader = _
+    }
     =
     let make_directive tag value = Sexp.List [ Atom tag; value ] in
     let make_directive_of_path tag path =
@@ -197,8 +213,16 @@ module Processed = struct
         let+ impl, intf = get_ext x in
         make_directive "SUFFIX" (Sexp.Atom (Printf.sprintf "%s %s" impl intf)))
     in
+    let reader =
+      match reader with
+      | Some reader ->
+        [ make_directive "READER" (Sexp.List (List.map ~f:(fun r -> Sexp.Atom r) reader))
+        ]
+      | None -> []
+    in
     Sexp.List
-      (List.concat [ stdlib_dir; exclude_query_dir; obj_dirs; src_dirs; flags; suffixes ])
+      (List.concat
+         [ stdlib_dir; exclude_query_dir; obj_dirs; src_dirs; flags; suffixes; reader ])
   ;;
 
   let quote_for_dot_merlin s =
@@ -257,7 +281,11 @@ module Processed = struct
       | None -> Copy_line_directive.DB.follow_while file ~f:find
     in
     let pp = Module_name.Per_item.get pp_config (Module.name module_) in
-    to_sexp ~opens ~pp config
+    let reader =
+      let extension = Path.Build.extension file in
+      List.assoc_opt extension config.extension_to_reader
+    in
+    to_sexp ~opens ~pp ~reader config
   ;;
 
   let print_file path =
@@ -268,7 +296,7 @@ module Processed = struct
         let open Pp.O in
         let name = Module.name module_ in
         let pp = Module_name.Per_item.get pp_config name in
-        let sexp = to_sexp ~opens ~pp config in
+        let sexp = to_sexp ~opens ~pp ~reader:None config in
         Pp.vbox (Pp.text (Module_name.to_string name))
         ++ Pp.newline
         ++ Pp.vbox (Sexp.pp sexp)
@@ -303,7 +331,14 @@ module Processed = struct
               { per_module_config = _
               ; pp_config
               ; config =
-                  { stdlib_dir = _; obj_dirs; src_dirs; flags; extensions; melc_flags }
+                  { stdlib_dir = _
+                  ; obj_dirs
+                  ; src_dirs
+                  ; flags
+                  ; extensions
+                  ; extension_to_reader = _
+                  ; melc_flags
+                  }
               }
             ->
             ( pp_config :: acc_pp
@@ -356,6 +391,7 @@ module Unprocessed = struct
     ; source_dirs : Path.Source.Set.t
     ; objs_dirs : Path.Set.t
     ; extensions : string option Ml_kind.Dict.t list
+    ; extension_to_reader : (string * string list) list
     ; mode : Lib_mode.t
     }
 
@@ -394,7 +430,7 @@ module Unprocessed = struct
       Path.Set.singleton @@ obj_dir_of_lib `Private mode (Obj_dir.of_local obj_dir)
     in
     let flags = Ocaml_flags.get flags mode in
-    let extensions = Dialect.DB.extensions_for_merlin dialects in
+    let for_merlin = Dialect.DB.for_merlin dialects in
     let config =
       { stdlib_dir
       ; mode
@@ -404,7 +440,8 @@ module Unprocessed = struct
       ; libname
       ; source_dirs
       ; objs_dirs
-      ; extensions
+      ; extensions = for_merlin.Dialect.DB.extensions
+      ; extension_to_reader = for_merlin.extension_to_reader
       }
     in
     { ident; config; modules }
@@ -510,6 +547,7 @@ module Unprocessed = struct
      ; config =
          { stdlib_dir
          ; extensions
+         ; extension_to_reader
          ; flags
          ; objs_dirs
          ; source_dirs
@@ -594,7 +632,14 @@ module Unprocessed = struct
            | Ok path ->
              [ Processed.Pp_kind.to_flag Ppx; Processed.serialize_path path ^ " -as-ppx" ])
       in
-      { Processed.stdlib_dir; src_dirs; obj_dirs; flags; extensions; melc_flags }
+      { Processed.stdlib_dir
+      ; src_dirs
+      ; obj_dirs
+      ; flags
+      ; extensions
+      ; melc_flags
+      ; extension_to_reader
+      }
     and+ pp_config = pp_config t sctx ~expander in
     let per_module_config =
       (* And copy for each module the resulting pp flags *)
