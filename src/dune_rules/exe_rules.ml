@@ -117,7 +117,7 @@ let executables_rules
   =
   (* Use "eobjs" rather than "objs" to avoid a potential conflict with a library
      of the same name *)
-  let* modules, obj_dir =
+  let* source_modules, obj_dir =
     let first_exe = first_exe exes in
     Dir_contents.ocaml dir_contents
     >>| Ml_sources.modules_and_obj_dir ~for_:(Exe { first_exe })
@@ -125,7 +125,7 @@ let executables_rules
   let* () = Check_rules.add_obj_dir sctx ~obj_dir (Ocaml Byte) in
   let ctx = Super_context.context sctx in
   let project = Scope.project scope in
-  let programs = programs ~modules ~exes in
+  let programs = programs ~modules:source_modules ~exes in
   let explicit_js_mode = Dune_project.explicit_js_mode project in
   let linkages = linkages ctx ~exes ~explicit_js_mode in
   let* flags = Buildable_rules.ocaml_flags sctx ~dir exes.buildable.flags in
@@ -136,7 +136,7 @@ let executables_rules
       expander
       ~dir
       scope
-      modules
+      source_modules
   in
   let* cctx =
     let requires_compile = Lib.Compile.direct_requires compile_info in
@@ -249,7 +249,7 @@ let executables_rules
       ~requires:requires_compile
       ~stdlib_dir
       ~flags
-      ~modules
+      ~source_modules
       ~source_dirs:Path.Source.Set.empty
       ~libname:None
       ~obj_dir
