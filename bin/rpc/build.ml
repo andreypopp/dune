@@ -83,3 +83,42 @@ let info =
 ;;
 
 let cmd = Cmd.v info term
+
+let format_term =
+  let filename = Arg.info [] ~docv:"FILENAME" in
+  let content = Arg.info [] ~docv:"CONTENT" in
+  let+ (common : Common.t) = Common.term
+  and+ wait = Rpc_common.wait_term
+  and+ filename = Arg.(required & pos 0 (some string) None & filename)
+  and+ content = Arg.(required & pos 1 (some string) None & content) in
+  Rpc_common.client_term common
+  @@ fun _common ->
+  let open Fiber.O in
+  let* conn = establish_client_session ~wait in
+  Dune_rpc_impl.Client.client
+    conn
+    (Dune_rpc.Initialize.Request.create ~id:(Dune_rpc.Id.make (Sexp.Atom "format")))
+    ~f:(fun session ->
+      let open Fiber.O in
+      let+ response =
+        Rpc_common.request_exn
+          session
+          (Dune_rpc_private.Decl.Request.witness Dune_rpc_impl.Decl.format)
+          (filename, content)
+      in
+      match response with
+      | Error (error : Dune_rpc_private.Response.Error.t) ->
+        Printf.printf
+          "Error: %s\n%!"
+          (Dyn.to_string (Dune_rpc_private.Response.Error.to_dyn error))
+      | Ok content -> print_endline content)
+;;
+
+let format_info =
+  let doc =
+    "formats a file content (requires dune to be running in passive watching mode)"
+  in
+  Cmd.info "format" ~doc
+;;
+
+let format_cmd = Cmd.v format_info format_term

@@ -68,6 +68,42 @@ module Alias = struct
   let fmt ~dir = Alias.make Alias0.fmt ~dir
 end
 
+let format_action (config : Format_config.t) ~dialects ~expander output_dir file =
+  let dir = Path.Build.parent_exn output_dir in
+  let depend_on_files named = depend_on_files ~named (Path.build dir) in
+  let input_basename = Path.Source.basename file in
+  let input = Path.Build.relative dir input_basename in
+  let output = Path.Build.relative output_dir input_basename in
+  let ext = Path.Source.extension file in
+  let open Option.O in
+  let* dialect, kind = Dialect.DB.find_by_extension dialects ext in
+  let* () =
+    Option.some_if (Format_config.includes config (Dialect (Dialect.name dialect))) ()
+  in
+  let+ loc, action, extra_deps =
+    match Dialect.format dialect kind with
+    | Some _ as action -> action
+    | None ->
+      (match Dialect.preprocess dialect kind with
+       | None -> Dialect.format Dialect.ocaml kind
+       | Some _ -> None)
+  in
+  let extra_deps =
+    match extra_deps with
+    | [] -> Action_builder.return ()
+    | extra_deps -> depend_on_files extra_deps
+  in
+  let open Action_builder.With_targets.O in
+  Action_builder.with_no_targets extra_deps
+  >>> Preprocessing.action_for_pp_with_target
+        ~sandbox:Sandbox_config.default
+        ~loc
+        ~expander
+        ~action
+        ~src:input
+        ~target:output
+;;
+
 let gen_rules_output
   sctx
   (config : Format_config.t)

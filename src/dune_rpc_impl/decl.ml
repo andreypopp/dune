@@ -58,5 +58,17 @@ module Build = struct
   let decl = Decl.Request.make ~method_:"build" ~generations:[ v1 ]
 end
 
+module Format = struct
+  let v1 =
+    Decl.Request.make_current_gen
+      ~req:(Conv.pair Conv.string Conv.string)
+      ~resp:Conv.string
+      ~version:1
+  ;;
+
+  let decl = Decl.Request.make ~method_:"format" ~generations:[ v1 ]
+end
+
 let build = Build.decl
+let format = Format.decl
 let status = Status.decl

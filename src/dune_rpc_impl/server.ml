@@ -323,28 +323,38 @@ let handler (t : _ t Fdecl.t) action_runner_server handle : 'a Dune_rpc_server.H
     Handler.declare_notification rpc Procedures.Server_side.log
   in
   let () = Handler.implement_request rpc Procedures.Public.ping (fun _ -> Fiber.return) in
+  let with_passive_watch_mode f =
+    let server = Fdecl.get t in
+    match server.watch_mode_config with
+    | No -> assert false
+    | Yes Eager ->
+      let error =
+        Dune_rpc.Response.Error.create
+          ~kind:Invalid_request
+          ~message:
+            "the rpc server is running with eager watch mode using --watch. to run \
+             builds through an rpc client, start the server using --passive-watch-mode"
+          ()
+      in
+      raise (Dune_rpc.Response.Error.E error)
+    | Yes Passive -> f server
+  in
   let () =
     let build _session targets =
-      let server = Fdecl.get t in
-      match server.watch_mode_config with
-      | No -> assert false
-      | Yes Eager ->
-        let error =
-          Dune_rpc.Response.Error.create
-            ~kind:Invalid_request
-            ~message:
-              "the rpc server is running with eager watch mode using --watch. to run \
-               builds through an rpc client, start the server using --passive-watch-mode"
-            ()
-        in
-        raise (Dune_rpc.Response.Error.E error)
-      | Yes Passive ->
-        let ivar = Fiber.Ivar.create () in
-        let targets = List.map targets ~f:server.parse_build in
-        let* () = Job_queue.write server.pending_build_jobs (targets, ivar) in
-        Fiber.Ivar.read ivar
+      with_passive_watch_mode
+      @@ fun server ->
+      let ivar = Fiber.Ivar.create () in
+      let targets = List.map targets ~f:server.parse_build in
+      let* () = Job_queue.write server.pending_build_jobs (targets, ivar) in
+      Fiber.Ivar.read ivar
     in
     Handler.implement_request rpc Decl.build build
+  in
+  let () =
+    let format _session (_filename, content) =
+      with_passive_watch_mode @@ fun _server -> Fiber.return content
+    in
+    Handler.implement_request rpc Decl.format format
   in
   let () =
     let rec cancel_pending_jobs () =
