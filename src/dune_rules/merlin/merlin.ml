@@ -144,8 +144,8 @@ module Processed = struct
   let get_ext { Ml_kind.Dict.impl; intf } =
     match impl, intf with
     | Some impl, Some intf -> Some (impl, intf)
-    | Some impl, None -> Some (impl, impl)
-    | None, Some intf -> Some (intf, intf)
+    | Some impl, None -> Some (impl, ".mli")
+    | None, Some intf -> Some (".ml", intf)
     | None, None -> None
   ;;
 

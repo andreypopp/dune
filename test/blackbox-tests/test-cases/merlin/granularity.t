@@ -113,7 +113,7 @@ Is it expected that the suffix for implementation and interface is the same ?
   (?:FLG(?:-open?:Dune__exe)
   (?:FLG(?:-pp?:$TESTCASE_ROOT/_build/default/pp.sh)
   (?:FLG(?:-w?:@1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-?:-strict-sequence?:-strict-formats?:-short-paths?:-keep-locs?:-no-strict-formats?:-g)
-  (?:SUFFIX?:.mlx .mlx))
+  (?:SUFFIX?:.mlx .mli))
 
   $ ./merlin_conf.sh pped.mli | diff pped.out -
 
@@ -127,15 +127,15 @@ As expected, the reader is not communicated for the standard mli
   (?:S?:$TESTCASE_ROOT
   (?:FLG(?:-open?:Dune__exe)
   (?:FLG(?:-w?:@1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-?:-strict-sequence?:-strict-formats?:-short-paths?:-keep-locs?:-no-strict-formats?:-g)
-  (?:SUFFIX?:.mlx .mlx))
+  (?:SUFFIX?:.mlx .mli))
 
 The reader is set for the mlx file
   $ ./merlin_conf.sh mel.mlx | diff mel.out -
   7c7,8
-  < (?:SUFFIX?:.mlx .mlx))
+  < (?:SUFFIX?:.mlx .mli))
   \ No newline at end of file
   ---
-  > (?:SUFFIX?:.mlx .mlx
+  > (?:SUFFIX?:.mlx .mli
   > (?:READER(?:mlx)))
   \ No newline at end of file
   [1]
@@ -156,7 +156,7 @@ found, then it'll make a guess that the file was preprocessed into a file with
   (?:S?:$TESTCASE_ROOT
   (?:FLG(?:-open?:Dune__exe)
   (?:FLG(?:-w?:@1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-?:-strict-sequence?:-strict-formats?:-short-paths?:-keep-locs?:-no-strict-formats?:-g)
-  (?:SUFFIX?:.mlx .mlx))
+  (?:SUFFIX?:.mlx .mli))
 
   $ ./merlin_conf.sh cppomod.ml | diff cppomod.out -
 
@@ -175,4 +175,4 @@ We could expect dune to get the wrongext module configuration
   (?:S?:$TESTCASE_ROOT
   (?:FLG(?:-open?:Dune__exe)
   (?:FLG(?:-w?:@1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-?:-strict-sequence?:-strict-formats?:-short-paths?:-keep-locs?:-no-strict-formats?:-g)
-  (?:SUFFIX?:.mlx .mlx))
+  (?:SUFFIX?:.mlx .mli))

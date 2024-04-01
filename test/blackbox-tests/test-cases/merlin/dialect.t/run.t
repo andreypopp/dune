@@ -16,7 +16,7 @@ CRAM sanitization
    (S
     $TESTCASE_ROOT/exe)
    (FLG (-w -40 -g))
-   (SUFFIX ".mlx .mlx")
+   (SUFFIX ".mlx .mli")
    (READER (mlx)))
   X: _build/default/exe/x.mlx.mli
   ((STDLIB /OCAMLC_WHERE)
@@ -26,7 +26,7 @@ CRAM sanitization
    (S
     $TESTCASE_ROOT/exe)
    (FLG (-w -40 -g))
-   (SUFFIX ".mlx .mlx"))
+   (SUFFIX ".mlx .mli"))
 
 CRAM sanitization
   $ dune build ./lib/.merlin-conf/lib-x --profile release
@@ -39,7 +39,7 @@ CRAM sanitization
    (S
     $TESTCASE_ROOT/lib)
    (FLG (-w -40 -g))
-   (SUFFIX ".mlx .mlx")
+   (SUFFIX ".mlx .mli")
    (READER (mlx)))
 
 CRAM sanitization
@@ -57,5 +57,5 @@ CRAM sanitization
    (S
     $TESTCASE_ROOT/melange)
    (FLG (-w -40 -g))
-   (SUFFIX ".mlx .mlx")
+   (SUFFIX ".mlx .mli")
    (READER (mlx)))
